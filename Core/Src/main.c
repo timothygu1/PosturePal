@@ -34,7 +34,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define WATCHDOG_INTERVAL_MS 5000
+volatile bool watchdog_expired = false;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,6 +50,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 ADC_ChannelConfTypeDef sConfig;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,7 +59,8 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void start_watchdog_timer(void);
+void stop_watchdog_timer(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -116,12 +119,25 @@ int main(void)
 
   // Conversion constant for ADC to degrees
   long unsigned int adc_deg_conv_const = 11.655555555555;
+  long unsigned int testtimer = 0;
+  start_watchdog_timer();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  if (watchdog_expired) {
+	        // Handle the watchdog timeout
+	        // ...
+
+	        // Reset the watchdog timer
+	        stop_watchdog_timer();
+	        start_watchdog_timer();
+	  }
+
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
 	// Make readings of the potentiometers using ADC, only reads one at a time to prevent erroneous values
     if (adc_channel == 0){ // Reads the first potentiometer (A0)
@@ -235,6 +251,17 @@ int main(void)
         }
     }
 
+
+    // Test code
+    if (HAL_GetTick() - testtimer > 10000){
+    	testtimer = HAL_GetTick();
+    	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+    	HAL_Delay(1000);
+    	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+    }
+
+
+
     HAL_Delay(100); // Delay to allow smooth operation
 
     /* USER CODE END WHILE */
@@ -242,6 +269,17 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
+}
+
+void start_watchdog_timer(void)
+{
+  HAL_Delay(WATCHDOG_INTERVAL_MS);
+  watchdog_expired = true;
+}
+
+void stop_watchdog_timer(void)
+{
+  watchdog_expired = false;
 }
 
 /**
